@@ -1,0 +1,10 @@
+# YAML file for cluster configuration. See README.md for details.
+
+# Falcon - University of Idaho HPC
+Falcon:
+  fab : ucx-1.15.0
+  mpi : openmpi-4.1.6
+  blas: openblas-0.3.30
+  hdf5: 1.14.6
+  fftw: 3.3.10
+  gsl : 2.8

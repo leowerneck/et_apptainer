@@ -1,0 +1,56 @@
+# File: layer2_interconnect.def
+Bootstrap: localimage
+From: layer1_os.sif
+
+%help
+    Einstein Toolkit Container --- Layer 2/5 --- Fabric
+
+    This layer installs interconnect fabric libraries.
+
+%labels
+    Author(s)  Leo Werneck <wernecklr@gmail.com>
+    Version    1.0
+    Layer      2/5
+
+%post
+    set -e
+
+    # Load environment
+    . /env.sh
+
+    # Install interconnect fabric libraries for different clusters
+    for CLUSTER in ${SUPPORTED_CLUSTERS}; do
+        module load cluster/${CLUSTER}
+
+        download_unpack_and_cd ${FAB_FLAVOR}-${FAB_VERSION}
+
+        ./configure --prefix=${LIBS_ROOT} \
+                    --enable-mt           \
+                    --with-verbs          \
+                    --with-rc             \
+                    --with-dc             \
+                    --enable-optimizations
+        make -j8 && make install
+
+        clean ${FAB_FLAVOR}-${FAB_VERSION}
+
+        module purge
+    done
+
+%test
+    # Load environment
+    . /env.sh
+
+    for CLUSTER in ${SUPPORTED_CLUSTERS}; do
+        module load cluster/${CLUSTER}
+
+        echo "Testing $FAB_FLAVOR install... "
+        if ! pkg-config --exists $FAB_FLAVOR; then
+            echo "no!"
+            echo "Error: pkg-config cannot find $FAB_FLAVOR"
+            exit 1
+        fi
+        echo "success!"
+
+        module purge
+    done

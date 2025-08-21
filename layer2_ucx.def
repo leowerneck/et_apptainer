@@ -1,0 +1,75 @@
+# File: layer2_ucx.def
+Bootstrap: localimage
+From: layer1_os.sif
+
+%help
+    Einstein Toolkit Container --- Layer 2/5 --- UCX
+
+    This layer installs the Unified Communication X (UCX) library, a
+    high-performance communication framework that enables efficient
+    internode communication over high-speed interconnects such as InfiniBand,
+    RoCE, and TCP, needed by MPI.
+
+%labels
+    Author(s)  Leo Werneck <wernecklr@gmail.com>
+    Version    1.0
+    Layer      2/5
+
+%post
+    set -e
+
+    cat << 'EOF' >> /env.sh
+
+# Set environment variables for Falcon
+export UCX_VER=1.15.0
+export FALCON_ROOT=/opt/ucx-${UCX_VER}
+export FALCON_INC=${FALCON_ROOT}/include
+export FALCON_LIB=${FALCON_ROOT}/lib
+export FALCON_BIN=${FALCON_ROOT}/bin
+
+# Add Falcon directories to the paths
+export PATH=${FALCON_ROOT}/bin:$PATH
+export LD_LIBRARY_PATH=${FALCON_ROOT}/lib:$LD_LIBRARY_PATH
+export LIBRARY_PATH=${FALCON_ROOT}/lib:$LIBRARY_PATH
+export CPATH=${FALCON_ROOT}/include:$CPATH
+export PKG_CONFIG_PATH=${FALCON_ROOT}/lib/pkgconfig:${FALCON_ROOT}/share/pkgconfig:$PKG_CONFIG_PATH
+export MANPATH=${FALCON_ROOT}/share/man:$MANPATH
+EOF
+
+    # Load updated environment
+    . /env.sh
+
+    download_unpack_and_cd ucx-${UCX_VER}
+
+    ./configure --prefix=${FALCON_ROOT} \
+                --enable-mt             \
+                --with-verbs            \
+                --with-rc               \
+                --with-dc               \
+                --enable-optimizations
+    make -j8 && make install
+
+    clean ucx-${UCX_VER}
+
+%test
+    echo "Testing ucx install"
+    for tool in ${FALCON_BIN}/ucx_info ucx_info; do
+        TOOL=$(which $tool)
+        if [ $? -eq 0 ]; then
+            echo "Success! Found $tool in $TOOL"
+        else
+            echo "Error! Could not find $tool"
+            exit 1
+        fi
+    done
+
+    printf "Testing if pkg-config can find ucx: "
+    if ! pkg-config --exists ucx; then
+        echo "no!"
+        echo "Error: pkg-config cannot find UCX"
+        exit 1
+    fi
+    echo "yes!"
+
+%environment
+    . /env.sh

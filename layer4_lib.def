@@ -1,0 +1,138 @@
+# File: layer4_lib.def
+Bootstrap: localimage
+From: layer3_mpi.sif
+
+%help
+    Einstein Toolkit Container --- Layer 4/5 --- External Libraries
+
+    This layer installs the following external libraries in LIBS_ROOT:
+      - OpenBLAS
+      - HDF5
+      - FFTW3
+      - GSL
+      - LORENE
+
+    We do the installation above manually because:
+      - HDF5 depends on MPI, so it must be built after layers 2 and 3;
+      - LORENE depends on GSL and FFTW3, so we must build those beforehand; and
+      - GSL and the Einstein Toolkit require BLAS, so we provide build the
+        high-performance library OpenBLAS.
+
+%labels
+    Author(s)  Leo Werneck <wernecklr@gmail.com>
+    Version    1.0
+    Layer      4/5
+
+%post
+    set -e
+
+    # Load environment
+    . /env.sh
+
+    for CLUSTER in ${SUPPORTED_CLUSTERS}; do
+        module load cluster/${CLUSTER}
+
+        # Additional versioning required by HDF5
+        HDF5_VERSION_UND=$(echo "$HDF5_VERSION" | tr . _)
+        HDF5_VERSION_MAJOR_UND=$(echo "$HDF5_VERSION_UND" | cut -d_ -f1,2)
+
+        ########
+        # BLAS #
+        ########
+        download_unpack_and_cd ${BLAS_FLAVOR}-${BLAS_VERSION}
+
+        if [ "$BLAS_FLAVOR" = "openblas" ]; then
+            make -j8 DYNAMIC_ARCH=1 USE_OPENMP=1 && make PREFIX=${LIBS_ROOT} install
+        else
+            echo "Error! Unsupported BLAS flavor: $BLAS_FLAVOR"
+            echo "Currently supported flavors: OpenBLAS"
+            exit 1
+        fi
+
+        clean ${BLAS_FLAVOR}-${BLAS_VERSION}
+
+        ########
+        # HDF5 #
+        ########
+        download_unpack_and_cd hdf5-${HDF5_VERSION}
+
+        ./configure                        \
+            --prefix=${LIBS_ROOT}          \
+            --enable-fortran               \
+            --enable-cxx                   \
+            --enable-shared                \
+            --enable-static                \
+            --with-zlib=yes                \
+            --enable-build-mode=production \
+            CC=mpicc                       \
+            CXX=mpicxx                     \
+            FC=mpif90
+        make -j8 && make install
+
+        clean hdf5-${HDF5_VERSION}
+
+        ########
+        # FFTW #
+        ########
+        download_unpack_and_cd fftw-${FFTW_VERSION}
+
+        ./configure               \
+            --prefix=${LIBS_ROOT} \
+            --enable-shared       \
+            --enable-threads      \
+            --enable-openmp       \
+            --enable-sse2         \
+            --enable-avx          \
+            --enable-avx2         \
+            --enable-avx512       \
+            --enable-fma          \
+            --enable-mpi          \
+            CC=mpicc
+        make -j8 && make install
+
+        clean fftw-${FFTW_VERSION}
+
+        #######
+        # GSL #
+        #######
+        download_unpack_and_cd gsl-${GSL_VERSION}
+
+        ./configure                                           \
+            --prefix=${LIBS_ROOT}                             \
+            --enable-shared                                   \
+            --disable-static                                  \
+            --with-blas=${LIBS_ROOT}/lib/lib${BLAS_FLAVOR}.so \
+            LDFLAGS="-fopenmp"                                \
+            CFLAGS="-O3 -fPIC -march=native -fopenmp"
+        make -j8 && make install
+
+        clean gsl-${GSL_VERSION}
+
+        ##########
+        # LORENE #
+        ##########
+        download_unpack_and_cd Lorene
+        cd / && mv /Lorene $HOME_LORENE && cd $HOME_LORENE
+
+        echo "# Lorene configuration
+CXX        = g++
+F77        = gfortran
+CXXFLAGS   = -O2 -fopenmp -march=native -std=c++17 -rdynamic -DNDEBUG
+CXXFLAGS_G = -O2 -fopenmp -march=native -std=c++17 -rdynamic
+F77FLAGS   = -O2 -fopenmp -march=native -fcray-pointer -ffixed-line-length-none -fno-range-check -DNDEBUG
+F77FLAGS_G = -O2 -fopenmp -march=native -fcray-pointer -ffixed-line-length-none -fno-range-check
+INC        = -I${HOME_LORENE}/C++/Include -I${HOME_LORENE}/C++/Include_extra
+RANLIB     = ls
+MAKEDEPEND = : > \$(df).d
+DEPDIR     = .deps
+FFT_DIR    = FFTW3
+LIB_CXX    = -lfftw3_omp -lgfortran -lstdc++ -lm
+LIB_LAPACK = -l${BLAS_FLAVOR}
+LIB_GSL    = -lgsl -l${BLAS_FLAVOR}
+LIB_PGPLOT =
+" > local_settings
+
+        make fortran
+        make export -j8
+        make cpp -j8
+    done

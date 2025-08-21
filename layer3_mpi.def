@@ -1,0 +1,83 @@
+# File: layer3_mpi.def
+Bootstrap: localimage
+From: layer2_fab.sif
+
+%help
+    Einstein Toolkit Container --- Layer 3/5 --- MPI
+    This layer installs MPI libraries.
+
+%labels
+    Author(s)  Leo Werneck <wernecklr@gmail.com>
+    Version    1.0
+    Layer      3/5
+
+%post
+    set -e
+
+    # Load environment
+    . /env.sh
+
+    for CLUSTER in ${SUPPORTED_CLUSTERS}; do
+        module load cluster/${CLUSTER}
+
+        cd /
+        download_unpack_and_cd ${MPI_FLAVOR}-${MPI_VERSION}
+
+        ./configure                 \
+            --prefix=${LIBS_ROOT}   \
+            --with-ucx=${LIBS_ROOT} \
+            --with-verbs            \
+            --with-hwloc=/usr       \
+            --without-hwloc-internal
+        make -j8 && make install
+
+        clean ${MPI_FLAVOR}-${MPI_VERSION}
+
+        if [ "$MPI_FLAVOR" = "openmpi" ]; then
+            if ! pkg-config --exists ompi; then
+                echo "Error! pkg-config cannot find ompi"
+                exit 1
+            fi
+
+            pcdir=$(pkg-config --variable=pcfiledir ompi 2>/dev/null)
+            ln -s ${pcdir}/ompi.pc      ${pcdir}/mpi.pc
+            ln -s ${pcdir}/ompi-c.pc    ${pcdir}/mpi-c.pc
+            ln -s ${pcdir}/ompi-cxx.pc  ${pcdir}/mpi-cxx.pc
+            ln -s ${pcdir}/ompi-fort.pc ${pcdir}/mpi-fort.pc
+        fi
+
+        module purge
+    done
+
+%test
+    # Load environment
+    . /env.sh
+
+    for CLUSTER in ${SUPPORTED_CLUSTERS}; do
+        module load cluster/${CLUSTER}
+
+        echo "Testing mpi install"
+        for tool in ${LIBS_BIN}/mpicc   \
+                    ${LIBS_BIN}/mpicxx  \
+                    ${LIBS_BIN}/mpifort \
+                    mpicc mpicxx mpifort; do
+
+            if TOOL=$(command -v "$tool" 2>/dev/null); then
+                echo "Success! Found $tool in $TOOL"
+            else
+                echo "Error! Could not find $tool"
+                exit 1
+            fi
+
+        done
+
+        printf "Testing if pkg-config can find MPI: "
+        if ! pkg-config --exists mpi; then
+            echo "no!"
+            echo "Error: pkg-config cannot find MPI"
+            exit 1
+        fi
+        echo "yes!"
+
+        module purge
+    done

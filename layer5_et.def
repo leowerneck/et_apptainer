@@ -1,0 +1,111 @@
+# File: layer5_et.def
+Bootstrap: localimage
+From: layer4_lib.sif
+
+%help
+    Einstein Toolkit Container --- Layer 5 --- Einstein Toolkit
+
+    This layer downloads and compiles the Einstein Toolkit (ET). The image
+    itself behaves as an ET executable, so you can use it as shown below.
+
+    Usage: ./et_<thornlist name>.sif [options] <parfile>
+
+%labels
+    Author(s)  Leo Werneck <wernecklr@gmail.com>
+    Version    1.0
+    Layer      5/5
+
+%setup
+    touch ${SINGULARITY_ROOTFS}/input_thornlist.th
+
+%post
+
+    # Load Falcon environment
+    . /env.sh
+    module load cluster/falcon
+
+    # Move to a known directory
+    cd /
+
+    # Download GetComponents using instructions from einsteintoolkit.org
+    curl -kLO "https://raw.githubusercontent.com/gridaphobe/CRL/ET_2025_05/GetComponents"
+    chmod a+x GetComponents
+
+    # Download the Einstein Toolkit using the shortened bns.th thornlist
+    # Note: The path to bns.th is now in the root of the container
+    ./GetComponents --noshallow /input_thornlist.th --root /Cactus
+
+    # Now build the Einstein Toolkit.
+    cd /Cactus
+
+    # Create option list
+    cat <<EOF > /et_options.cfg
+# Einstein Toolkit options list
+VERSION = 2025-08-15
+
+# Compilers
+CPP = cpp
+FPP = cpp
+CC  = mpicc
+CXX = mpicxx
+F77 = mpifort
+F90 = mpifort
+
+# Compiler flags
+CPPFLAGS =
+FPPFLAGS = -traditional
+CFLAGS   = -O2 -g -fopenmp -march=native -std=gnu99
+CXXFLAGS = -O2 -g -fopenmp -march=native -std=c++17
+F77FLAGS = -O2 -g -fopenmp -march=native -fcray-pointer -ffixed-line-length-none -fno-range-check
+F90FLAGS = -O2 -g -fopenmp -march=native -fcray-pointer -ffixed-line-length-none -fno-range-check
+
+# Linker flags
+LDFLAGS = -rdynamic
+
+# Vectorization options
+VECTORISE                            = yes
+VECTORISE_ALIGNED_ARRAYS             = no
+VECTORISE_ALWAYS_USE_UNALIGNED_LOADS = yes
+VECTORISE_INLINE                     = yes
+
+# Debug flags
+DEBUG = no
+
+# External library directories
+MPI_DIR      = $LIBS_ROOT
+HDF5_DIR     = $LIBS_ROOT
+FFTW3_DIR    = $LIBS_ROOT
+GSL_DIR      = $LIBS_ROOT
+OPENBLAS_DIR = $LIBS_ROOT
+LORENE_DIR   = $HOME_LORENE
+
+# Misc?
+PTHREADS_DIR      = NO_BUILD
+C_LINE_DIRECTIVES = yes
+F_LINE_DIRECTIVES = yes
+EOF
+
+    yes | make sim-config options=/et_options.cfg | tee /et_config.out
+    cp thornlists/input_thornlist.th configs/sim/ThornList
+    make -j32 | tee /et_make.out
+
+    # Copy the executable
+    cp exe/cactus_sim /et_exe
+
+    # Clean up
+    cd /
+    rm -rf Cactus
+
+%test
+    ET=$(/et_exe -h)
+    if [ $? -eq 1 ]; then
+        echo "Success! ET executable working as intended."
+    else
+        echo "Error! ET executable not working."
+        exit 1
+    fi
+
+%runscript
+    # This script runs when you execute the container (e.g., ./et_<parfile>.sif)
+    echo "Einstein Toolkit container ready. Running the Einstein Toolkit."
+    /et_exe "$@"
