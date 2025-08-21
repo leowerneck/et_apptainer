@@ -20,7 +20,7 @@ Einstein Toolkit container ready. Running the Einstein Toolkit.
 
 ## Supported Clusters
 
-As of release v0.2.0, the following clusters are supported:
+As of release v0.1.0, the following clusters are supported:
 
 | **Cluster** | **Fabric** |    **MPI**    |
 |:-----------:|:----------:|:-------------:|
