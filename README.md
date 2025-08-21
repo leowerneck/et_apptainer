@@ -26,7 +26,7 @@ As of release v0.2.0, the following clusters are supported:
 |:-----------:|:----------:|:-------------:|
 |   Falcon    | ucx-1.15.1 | openmpi-4.1.6 |
 
-## Adding Support for Other Clusters
+## Adding Support for Other Clusters :construction:
 
 New clusters can be added by extending the `clusters.yml` file. Each entry should have the following format:
 ```yml
@@ -59,7 +59,7 @@ MyCluster:
   mpi: openmpi-4.1.6
 ```
 
-### Using a Different Flavor/Version
+### Custom URL :construction:
 By default, all libraries are downloaded from a [static repository](https://github.com/leowerneck/apptainer_libs). If you want to use a flavor or version that is not available in it, then you can provide the download URL, for example:
 ```yml
 MyCluster:
@@ -68,7 +68,7 @@ MyCluster:
     url: https://www.mpich.org/static/downloads/4.3.1/mpich-4.3.1.tar.gz
 ```
 
-### Custom Configure Flags
+### Custom Configure Flags :construction:
 Most packages are installed using:
 ```bash
 curl -OL $PACKAGE_URL
