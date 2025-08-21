@@ -1,6 +1,6 @@
 # File: layer2_interconnect.def
 Bootstrap: localimage
-From: layer1_os.sif
+From: images/layer1_os.sif
 
 %help
     Einstein Toolkit Container --- Layer 2/5 --- Fabric

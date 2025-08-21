@@ -1,6 +1,6 @@
 # File: layer5_et.def
 Bootstrap: localimage
-From: layer4_lib.sif
+From: images/layer4_lib.sif
 
 %help
     Einstein Toolkit Container --- Layer 5 --- Einstein Toolkit

@@ -1,6 +1,6 @@
 # File: layer4_lib.def
 Bootstrap: localimage
-From: layer3_mpi.sif
+From: images/layer3_mpi.sif
 
 %help
     Einstein Toolkit Container --- Layer 4/5 --- External Libraries

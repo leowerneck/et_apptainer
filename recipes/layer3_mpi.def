@@ -1,6 +1,6 @@
 # File: layer3_mpi.def
 Bootstrap: localimage
-From: layer2_fab.sif
+From: images/layer2_fab.sif
 
 %help
     Einstein Toolkit Container --- Layer 3/5 --- MPI

@@ -15,7 +15,7 @@ From: ubuntu:24.04
 
 %files
     ./clusters.yml /opt/clusters.yml
-    ./parser.py /opt/cluster_parser.py
+    ./scripts/parser.py /opt/cluster_parser.py
 
 %post
     set -e
