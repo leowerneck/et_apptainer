@@ -7,6 +7,7 @@ import sys
 import yaml
 from typing import Union
 
+apptainer_libs_url = "https://github.com/leowerneck/apptainer_libs/raw/refs/heads/main"
 
 class Cluster:
     """
@@ -15,10 +16,23 @@ class Cluster:
 
     def __init__(self, name: str, user_cfg: dict):
         self.default_cfg = {
-            "blas": "openblas-0.3.30",
-            "hdf5": "1.14.6",
-            "fftw": "3.3.10",
-            "gsl": "2.8",
+            "blas": {
+                "flavor": "openblas",
+                "version": "0.3.30",
+                "url": f"{apptainer_libs_url}/openblas-0.3.30.tar.gz",
+            },
+            "hdf5": {
+                "version": "1.14.6",
+                "url": f"{apptainer_libs_url}/hdf5-1.14.6.tar.gz",
+            },
+            "fftw": {
+                "version": "3.3.10",
+                "url": f"{apptainer_libs_url}/fftw-3.3.10.tar.gz",
+            },
+            "gsl": {
+                "version": "2.8",
+                "url": f"{apptainer_libs_url}/gsl-2.8.tar.gz",
+            },
         }
         cfg = self.default_cfg | (user_cfg or {})
         self.name = name
@@ -42,7 +56,7 @@ class Cluster:
     @staticmethod
     def _get_version(value: Union[str, int, float]) -> str:
         s = str(value).strip()
-        m = re.search(r'(?<!\d)(\d+(?:\.\d+){0,2}(?:-[0-9A-Za-z][0-9A-Za-z.-]*)?)$', s)
+        m = re.search(r"(?<!\d)(\d+(?:\.\d+){0,2}(?:-[0-9A-Za-z][0-9A-Za-z.-]*)?)$", s)
         return m.group(1) if m else s
 
     def __str__(self):
