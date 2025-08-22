@@ -1,4 +1,5 @@
 from typing import Union
+from parser_exceptions import *
 
 base_url = "https://github.com/leowerneck/apptainer_libs/raw/refs/heads/main"
 packages = {
@@ -16,14 +17,14 @@ def get_default_url(package: str, version: Union[str, None] = None) -> str:
     Returns the default URL for a specific package and version
 
     Raises:
-        - ValueError if an invalid package name is provided
-        - ValueError if an invalid package version is provided
+        - InvalidPackageError if an invalid package name is provided
+        - InvalidVersionError if an invalid package version is provided
     """
     if package not in packages.keys():
-        raise ValueError(f"Invalid package {package}")
+        raise InvalidPackageError(f"Invalid package {package}")
 
     if version is not None and version not in packages[package]:
-        raise ValueError(f"Invalid version {version} for package {package}")
+        raise InvalidVersionError(f"Invalid version {version} for package {package}")
 
     if version is None:
         version = packages[package][0]
